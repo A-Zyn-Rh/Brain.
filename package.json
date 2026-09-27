@@ -1,0 +1,17 @@
+{
+  "name": "brain-backend",
+  "version": "1.0.0",
+  "description": "Backend proxy untuk Brain - menyimpan API key provider AI di server, bukan di browser.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.3"
+  }
+}

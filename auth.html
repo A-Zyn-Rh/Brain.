@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Masuk atau Daftar — Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="auth.css">
+</head>
+<body>
+
+<a href="index.html" class="auth-skip-link">&larr; Lanjutkan tanpa akun</a>
+
+<div class="auth-shell">
+
+  <!-- ============ LEFT: branding panel (hidden on mobile) ============ -->
+  <aside class="auth-branding">
+    <div class="auth-branding-vignette"></div>
+    <div class="auth-stars" id="authStars"></div>
+
+    <div class="auth-branding-content">
+      <div class="brand-mark">
+        <span class="pulse-orb"></span>
+        <span class="brand-word">BR<span class="ai">AI</span>N</span>
+      </div>
+
+      <h1 class="auth-headline">Satu ruang berpikir,<br>tanpa gangguan.</h1>
+      <p class="auth-subline">Masuk untuk melanjutkan percakapanmu. Riwayat, preferensi, dan sesi kerjamu tersimpan otomatis di setiap perangkat.</p>
+
+      <ul class="auth-points">
+        <li><span class="point-icon" data-icon="check"></span>Riwayat obrolan tersinkron otomatis</li>
+        <li><span class="point-icon" data-icon="check"></span>Satu akun untuk semua perangkat</li>
+        <li><span class="point-icon" data-icon="check"></span>Data kamu tetap privat</li>
+      </ul>
+    </div>
+
+    <div class="auth-branding-footer">&copy; <span id="authYear"></span> Brain. Seluruh hak cipta dilindungi.</div>
+  </aside>
+
+  <!-- ============ RIGHT: auth card ============ -->
+  <main class="auth-main">
+    <div class="auth-card">
+
+      <div class="auth-card-logo">
+        <span class="pulse-orb small"></span>
+        <span class="brand-word small">BR<span class="ai">AI</span>N</span>
+      </div>
+
+      <!-- Logged-in state (shown when a mock session already exists in localStorage) -->
+      <section id="sessionPanel" class="session-panel hidden">
+        <div class="session-avatar" id="sessionAvatar">B</div>
+        <h2 class="session-title">Kamu sudah masuk</h2>
+        <p class="session-sub">Login sebagai <strong id="sessionEmail">-</strong></p>
+        <button type="button" class="submit-btn" id="sessionContinueBtn">
+          <span class="btn-label">Lanjut ke Brain</span>
+        </button>
+        <button type="button" class="link-strong session-logout" id="sessionLogoutBtn">Keluar dari akun ini</button>
+      </section>
+
+      <!-- Login / Register forms -->
+      <div class="auth-forms" id="authForms">
+        <div class="auth-forms-track" id="authFormsTrack">
+
+          <!-- ---------------- LOGIN PANE ---------------- -->
+          <section class="auth-pane" id="paneLogin" aria-hidden="false">
+            <header class="auth-head">
+              <h2>Masuk ke Brain</h2>
+              <p>Senang ketemu lagi. Masukkan detail akunmu.</p>
+            </header>
+
+            <div class="oauth-group">
+              <button type="button" class="oauth-btn" data-provider="Google">
+                <span class="oauth-icon" data-icon="google"></span>
+                <span>Lanjutkan dengan Google</span>
+              </button>
+              <button type="button" class="oauth-btn" data-provider="GitHub">
+                <span class="oauth-icon" data-icon="github"></span>
+                <span>Lanjutkan dengan GitHub</span>
+              </button>
+              <button type="button" class="oauth-btn" data-provider="Facebook">
+                <span class="oauth-icon" data-icon="facebook"></span>
+                <span>Lanjutkan dengan Facebook</span>
+              </button>
+            </div>
+            <div class="oauth-secondary">
+              <button type="button" class="oauth-btn-sm" data-provider="Apple" aria-label="Lanjutkan dengan Apple">
+                <span class="oauth-icon" data-icon="apple"></span><span>Apple</span>
+              </button>
+              <button type="button" class="oauth-btn-sm" data-provider="Microsoft" aria-label="Lanjutkan dengan Microsoft">
+                <span class="oauth-icon" data-icon="microsoft"></span><span>Microsoft</span>
+              </button>
+            </div>
+
+            <div class="divider"><span>Atau masuk dengan email</span></div>
+
+            <form id="loginForm" novalidate>
+              <div class="field">
+                <label for="loginEmail">Email</label>
+                <div class="input-wrap">
+                  <span class="input-icon" data-icon="mail"></span>
+                  <input type="email" id="loginEmail" name="email" placeholder="nama@email.com" autocomplete="email">
+                </div>
+                <p class="field-error" id="loginEmailError"></p>
+              </div>
+
+              <div class="field">
+                <div class="field-label-row">
+                  <label for="loginPassword">Password</label>
+                  <button type="button" class="link-sm" id="forgotPasswordBtn">Lupa password?</button>
+                </div>
+                <div class="input-wrap">
+                  <span class="input-icon" data-icon="lock"></span>
+                  <input type="password" id="loginPassword" name="password" placeholder="Minimal 8 karakter" autocomplete="current-password">
+                  <button type="button" class="input-toggle" data-toggle-for="loginPassword" aria-label="Tampilkan password">
+                    <span data-icon="eye"></span>
+                  </button>
+                </div>
+                <p class="field-error" id="loginPasswordError"></p>
+              </div>
+
+              <div class="field-row">
+                <label class="checkbox">
+                  <input type="checkbox" id="rememberMe">
+                  <span class="checkbox-box"></span>
+                  <span>Ingat saya</span>
+                </label>
+              </div>
+
+              <p class="form-message" id="loginMessage"></p>
+
+              <button type="submit" class="submit-btn" id="loginSubmit">
+                <span class="btn-label">Masuk</span>
+                <span class="btn-spinner" aria-hidden="true"></span>
+              </button>
+            </form>
+
+            <p class="switch-line">Belum punya akun? <button type="button" class="link-strong" id="toRegister">Daftar gratis</button></p>
+          </section>
+
+          <!-- ---------------- REGISTER PANE ---------------- -->
+          <section class="auth-pane" id="paneRegister" aria-hidden="true">
+            <header class="auth-head">
+              <h2>Buat akun Brain</h2>
+              <p>Gratis, dan tidak perlu kartu kredit.</p>
+            </header>
+
+            <div class="oauth-group">
+              <button type="button" class="oauth-btn" data-provider="Google">
+                <span class="oauth-icon" data-icon="google"></span>
+                <span>Daftar dengan Google</span>
+              </button>
+              <button type="button" class="oauth-btn" data-provider="GitHub">
+                <span class="oauth-icon" data-icon="github"></span>
+                <span>Daftar dengan GitHub</span>
+              </button>
+              <button type="button" class="oauth-btn" data-provider="Facebook">
+                <span class="oauth-icon" data-icon="facebook"></span>
+                <span>Daftar dengan Facebook</span>
+              </button>
+            </div>
+            <div class="oauth-secondary">
+              <button type="button" class="oauth-btn-sm" data-provider="Apple" aria-label="Daftar dengan Apple">
+                <span class="oauth-icon" data-icon="apple"></span><span>Apple</span>
+              </button>
+              <button type="button" class="oauth-btn-sm" data-provider="Microsoft" aria-label="Daftar dengan Microsoft">
+                <span class="oauth-icon" data-icon="microsoft"></span><span>Microsoft</span>
+              </button>
+            </div>
+
+            <div class="divider"><span>Atau daftar dengan email</span></div>
+
+            <form id="registerForm" novalidate>
+              <div class="field">
+                <label for="registerName">Nama lengkap</label>
+                <div class="input-wrap">
+                  <span class="input-icon" data-icon="user"></span>
+                  <input type="text" id="registerName" name="name" placeholder="Nama kamu" autocomplete="name">
+                </div>
+                <p class="field-error" id="registerNameError"></p>
+              </div>
+
+              <div class="field">
+                <label for="registerEmail">Email</label>
+                <div class="input-wrap">
+                  <span class="input-icon" data-icon="mail"></span>
+                  <input type="email" id="registerEmail" name="email" placeholder="nama@email.com" autocomplete="email">
+                </div>
+                <p class="field-error" id="registerEmailError"></p>
+              </div>
+
+              <div class="field">
+                <label for="registerPassword">Password</label>
+                <div class="input-wrap">
+                  <span class="input-icon" data-icon="lock"></span>
+                  <input type="password" id="registerPassword" name="password" placeholder="Minimal 8 karakter" autocomplete="new-password">
+                  <button type="button" class="input-toggle" data-toggle-for="registerPassword" aria-label="Tampilkan password">
+                    <span data-icon="eye"></span>
+                  </button>
+                </div>
+                <p class="field-error" id="registerPasswordError"></p>
+              </div>
+
+              <div class="field">
+                <label for="registerConfirm">Konfirmasi password</label>
+                <div class="input-wrap">
+                  <span class="input-icon" data-icon="lock"></span>
+                  <input type="password" id="registerConfirm" name="confirm" placeholder="Ulangi password" autocomplete="new-password">
+                  <button type="button" class="input-toggle" data-toggle-for="registerConfirm" aria-label="Tampilkan password">
+                    <span data-icon="eye"></span>
+                  </button>
+                </div>
+                <p class="field-error" id="registerConfirmError"></p>
+              </div>
+
+              <div class="field-row">
+                <label class="checkbox">
+                  <input type="checkbox" id="agreeTerms">
+                  <span class="checkbox-box"></span>
+                  <span>Saya menyetujui <a href="#" class="link-sm" id="termsLink">Syarat &amp; Ketentuan</a></span>
+                </label>
+                <p class="field-error" id="agreeTermsError"></p>
+              </div>
+
+              <p class="form-message" id="registerMessage"></p>
+
+              <button type="submit" class="submit-btn" id="registerSubmit">
+                <span class="btn-label">Buat akun</span>
+                <span class="btn-spinner" aria-hidden="true"></span>
+              </button>
+            </form>
+
+            <p class="switch-line">Sudah punya akun? <button type="button" class="link-strong" id="toLogin">Masuk</button></p>
+          </section>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<div id="authToast" class="auth-toast"></div>
+
+<script src="auth.js"></script>
+</body>
+</html>

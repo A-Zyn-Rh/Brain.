@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<script>
+  /* Auth check — login is optional. If a session exists in localStorage
+     (set by auth.html) we use it to namespace chat storage; otherwise
+     Brain runs in guest mode and a "Masuk" button appears in the topbar. */
+  (function(){
+    try{
+      var s = JSON.parse(localStorage.getItem('brain_auth_session'));
+      window.__BRAIN_USER = (s && s.id) ? s : null;
+    }catch(e){
+      window.__BRAIN_USER = null;
+    }
+  })();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link rel="stylesheet" href="brain.css">
+</head>
+<body>
+<div id="introScreen">
+  <canvas id="introBgCanvas" class="intro-bg-canvas"></canvas>
+  <div class="intro-vignette"></div>
+  <div class="intro-grain"></div>
+  <div class="intro-sweep"></div>
+  <div class="intro-flash"></div>
+
+  <div class="intro-content">
+    <div class="intro-orb-wrap">
+      <div class="intro-orb-glow"></div>
+      <canvas id="introOrbCanvas" class="intro-orb-canvas"></canvas>
+    </div>
+    <div class="intro-word" id="introWord"><span class="iw-letter">B</span><span class="iw-letter">R</span><span class="iw-letter iw-ai" id="introWordAi">AI</span><span class="iw-letter">N</span></div>
+    <div class="intro-status">Initializing Intelligence...</div>
+    <div class="intro-progress"><div class="intro-progress-fill" id="introProgressFill"></div></div>
+  </div>
+
+  <button type="button" id="introSkip" class="intro-skip">Skip intro &rarr;</button>
+</div>
+
+<div id="app">
+
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <button id="menuToggle" class="icon-btn mobile-only" aria-label="Buka menu"></button>
+      <div class="brand">
+        <span class="pulse-orb"></span>
+        <span class="brand-name">Brain</span>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <div class="model-select-wrap">
+        <button id="modelSelectBtn" class="model-select" aria-haspopup="listbox">
+          <span class="model-select-engine-icon" id="modelSelectIcon"></span>
+          <span id="modelSelectLabel">Claude</span>
+        </button>
+        <div id="modelDropdown" class="model-dropdown" role="listbox"></div>
+      </div>
+      <div class="segmented" id="segmented"></div>
+    </div>
+
+    <div class="topbar-right">
+      <span class="token-meter" id="tokenMeter">0 / 128k</span>
+      <button id="loginNavBtn" class="login-nav-btn hidden">Masuk</button>
+      <div class="settings-wrap">
+        <button id="settingsBtn" class="icon-btn" aria-label="Pengaturan"></button>
+        <div id="settingsPop" class="settings-pop">
+          <div class="settings-account" id="settingsAccountLoggedIn">
+            <div class="settings-account-avatar" id="accountAvatar">?</div>
+            <div class="settings-account-text">
+              <div class="settings-account-name" id="accountName">-</div>
+              <div class="settings-account-email" id="accountEmail">-</div>
+            </div>
+          </div>
+          <div class="settings-guest hidden" id="settingsAccountGuest">
+            <p class="settings-guest-text">Kamu belum masuk. Masuk untuk menyimpan riwayat ke akunmu di semua perangkat.</p>
+            <button type="button" class="settings-guest-btn" id="settingsLoginBtn">Masuk / Daftar</button>
+          </div>
+          <div class="settings-divider"></div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Mode Deep Thinking</div>
+              <div class="settings-desc">Tampilkan alur penalaran sebelum jawaban akhir</div>
+            </div>
+            <button id="deepThinkToggle" class="switch" role="switch" aria-checked="false"></button>
+          </div>
+          <div class="settings-divider"></div>
+          <button id="clearHistoryBtn" class="danger-btn">Hapus semua riwayat</button>
+          <button id="logoutBtn" class="danger-btn">Keluar dari akun</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="shell">
+    <div id="drawerScrim" class="drawer-scrim"></div>
+
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-section" id="engineList"></div>
+
+      <button id="newChatBtn" class="new-chat-btn"></button>
+
+      <div class="sidebar-search">
+        <span id="searchIcon"></span>
+        <input id="historySearch" placeholder="Cari riwayat">
+      </div>
+
+      <div id="historyList" class="history-list"></div>
+
+      <div class="sidebar-footer">Brain &middot; copyright 2026 Azyyr©(Zayyan)"</div>
+    </aside>
+
+    <main class="main">
+      <div class="messages" id="messagesScroll">
+        <div class="messages-inner" id="messagesInner"></div>
+      </div>
+
+      <div class="composer-wrap">
+        <div class="composer">
+          <textarea id="composerInput" placeholder="Tulis pesan ke Brain..." rows="1"></textarea>
+          <button id="sendBtn" class="send-btn" aria-label="Kirim" disabled></button>
+        </div>
+        <div class="composer-hint">Brain bisa saja keliru. Periksa kembali informasi penting.</div>
+      </div>
+    </main>
+
+    <div id="artifactPanel" class="artifact-panel">
+      <div class="artifact-head">
+        <span class="artifact-title" id="artifactTitle">preview.html</span>
+        <button id="closeArtifact" class="icon-btn" aria-label="Tutup preview"></button>
+      </div>
+      <iframe id="artifactFrame" class="artifact-frame" sandbox="allow-scripts"></iframe>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="brain-config.js"></script>
+<script src="brain.js"></script>
+</body>
+</html>
