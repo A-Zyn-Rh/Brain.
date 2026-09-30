@@ -1,4 +1,4 @@
-// File: api/chat.js (Vercel Serverless Function)
+// File: api/chat.js
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -8,9 +8,8 @@ export default async function handler(req, res) {
   const apiKey = process.env.OPENROUTER_API_KEY;
 
   if (!apiKey) {
-    return res.status(500).json({
-      error:
-        "OPENROUTER_API_KEY belum dipasang di Environment Variables Vercel!",
+    return res.status(500).json({ 
+      error: "OPENROUTER_API_KEY belum dipasang di Environment Variables Vercel!" 
     });
   }
 
@@ -23,44 +22,58 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "system", content: system });
     }
 
-    const selectedModel =
-      model || "google/gemini-2.0-flash-exp:free";
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: fullMessages,
-        }),
-      },
-    );
+    // List model gratis resmi & paling stabil di OpenRouter saat ini
+    const freeModelsFallback = [
+      model, // Prioritas 1: Model pilihan dari frontend
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "google/gemini-2.0-flash-lite-001:free",
+      "qwen/qwen-2.5-coder-32b-instruct:free",
+      "deepseek/deepseek-r1:free"
+    ].filter(Boolean); // Hapus jika undefined
 
-    const data = await response.json();
+    let lastError = null;
 
-    if (!response.ok) {
-      return res.status(response.status).json({
-        error:
-          data.error?.message ||
-          `Error dari OpenRouter (Status ${response.status})`,
-      });
+    // Loop mencoba model satu per satu sampai ada yang berhasil
+    for (const currentModel of freeModelsFallback) {
+      try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: currentModel,
+            messages: fullMessages,
+          }),
+        });
+
+        const data = await response.json();
+
+        // Jika berhasil (200 OK)
+        if (response.ok && data.choices?.[0]?.message?.content) {
+          return res.status(200).json({
+            text: data.choices[0].message.content,
+            usage: data.usage?.total_tokens || 0,
+            modelUsed: currentModel // Info model mana yang berhasil menjawab
+          });
+        }
+
+        // Simpan error lalu coba model berikutnya di loop
+        lastError = data.error?.message || `Status ${response.status} dari model ${currentModel}`;
+      } catch (err) {
+        lastError = err.message;
+      }
     }
 
-    const textOutput = data.choices?.[0]?.message?.content || "";
-    const totalTokens = data.usage?.total_tokens || 0;
-
-    return res.status(200).json({
-      text: textOutput,
-      usage: totalTokens,
-    });
-  } catch (error) {
-    console.error("API Chat Error:", error);
+    // Jika SEMUA model di daftar fallback gagal
     return res.status(500).json({
-      error: `Gagal terhubung ke API: ${error.message || error}`,
+      error: `Semua model gratisan gagal merespon. Error terakhir: ${lastError}`
+    });
+
+  } catch (error) {
+    return res.status(500).json({ 
+      error: `Server Error: ${error.message || error}` 
     });
   }
 }
