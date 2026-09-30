@@ -24,8 +24,7 @@ export default async function handler(req, res) {
     }
 
     const selectedModel =
-      model || "google/gemini-2.0-flash-lite-preview-02-05:free";
-
+      model || "google/gemini-2.0-flash-exp:free";
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
