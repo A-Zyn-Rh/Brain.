@@ -37,7 +37,7 @@ const ENGINES = {
     sub: "OpenRouter Free",
     glyph: ICON.spark,
     provider: "openrouter",
-    model: "google/gemini-2.0-flash-lite-preview-02-05:free",
+    model: "google/gemini-2.0-flash-exp:free",
     system:
       "Kamu adalah Brain, asisten AI yang ditenagai Claude (Anthropic). Jawab dengan terstruktur, jelas, dan proaktif menawarkan langkah berikutnya bila relevan.",
   },
