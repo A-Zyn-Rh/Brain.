@@ -450,13 +450,13 @@
 
   .intro-status{
     margin-top:18px;font-size:12px;font-weight:400;letter-spacing:0.12em;color:rgba(255,255,255,0.45);
-    opacity:0;animation:intro-fade-simple 900ms var(--ease-out) 3.85s forwards;
+    opacity:0;animation:intro-fade-simple 400ms var(--ease-out) 0.2s forwards;
   }
   @keyframes intro-fade-simple{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 
   .intro-progress{
     margin-top:28px;width:180px;height:1.5px;background:rgba(255,255,255,0.1);border-radius:2px;
-    overflow:hidden;opacity:0;animation:intro-fade-simple 750ms var(--ease-out) 4.15s forwards;position:relative;
+    overflow:hidden;opacity:0;animation:intro-fade-simple 400ms var(--ease-out) 0.3s forwards;position:relative;
   }
   .intro-progress-fill{
     position:absolute;left:0;top:0;bottom:0;width:0%;background:#fff;border-radius:2px;
