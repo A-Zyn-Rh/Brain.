@@ -423,6 +423,8 @@
     transition:width 820ms var(--ease-out),margin-right 820ms var(--ease-out),
                opacity 560ms var(--ease-out),filter 620ms var(--ease-out),
                transform 820ms var(--ease-out);
+      will-change: transform, opacity, filter;
+  transform: translateZ(0)
   }
   .iw-letter:last-child{margin-right:0;}
   .iw-letter:nth-child(1){animation-delay:1.00s;}
@@ -517,9 +519,14 @@
     .segmented{display:none;}
   }
 
-  @media (prefers-reduced-motion:reduce){
-    *,*::before,*::after{
-      animation-duration:0.001ms !important;animation-iteration-count:1 !important;
-      transition-duration:0.001ms !important;scroll-behavior:auto !important;
-    }
+  /* Pengecualian agar intro tetap beranimasi meski HP mode hemat baterai */
+@media (prefers-reduced-motion:reduce){
+  *:not(#introScreen, #introScreen *),
+  *::before,
+  *::after {
+    animation-duration:0.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.001ms !important;
+    scroll-behavior:auto !important;
   }
+}
