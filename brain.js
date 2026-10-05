@@ -33,8 +33,8 @@ const ICON = {
 const ENGINES = {
   claude: {
     id: "claude",
-    label: "Claude",
-    sub: "OpenRouter Free",
+    label: "BrainAsgra",
+    sub: "Best Brain model",
     glyph: ICON.spark,
     provider: "openrouter",
     model: "meta-llama/llama-3.3-70b-instruct:free",
@@ -43,8 +43,8 @@ const ENGINES = {
   },
   openai: {
     id: "openai",
-    label: "GPT-4o",
-    sub: "OpenAI",
+    label: "BrainDev",
+    sub: "For Coding",
     glyph: ICON.spark,
     provider: "openai",
     system:
@@ -52,8 +52,8 @@ const ENGINES = {
   },
   gemini: {
     id: "gemini",
-    label: "Gemini",
-    sub: "Google",
+    label: "BrainOrbit",
+    sub: "For General chat",
     glyph: ICON.orbit,
     provider: "gemini",
     system:
@@ -61,8 +61,8 @@ const ENGINES = {
   },
   grok: {
     id: "grok",
-    label: "Grok",
-    sub: "xAI",
+    label: "BrainPro",
+    sub: "For Pro Users",
     glyph: ICON.bolt,
     provider: "grok",
     system:
