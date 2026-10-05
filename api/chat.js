@@ -23,13 +23,14 @@ export default async function handler(req, res) {
     }
 
     // List model gratis resmi & paling stabil di OpenRouter saat ini
-    const freeModelsFallback = [
-      model, // Prioritas 1: Model pilihan dari frontend
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "google/gemini-2.0-flash-lite-001:free",
-      "qwen/qwen-2.5-coder-32b-instruct:free",
-      "deepseek/deepseek-r1:free"
-    ].filter(Boolean); // Hapus jika undefined
+  // Contoh pembaruan daftar model fallback di backend
+const freeModelsFallback = [
+  "openrouter/free",                   // Auto-router resmi OpenRouter (Terbaik)
+  "qwen/qwen3.8-27b:free",            // Alternative model aktif
+  "cohere/north-mini-code:free",       // Coder model
+  "nvidia/nemotron-3.5-lightning:free",// General chat / agent
+  "liquid/lfm-2.5-2.6b:free"           // Fast lightweight
+].filter(Boolean);
 
     let lastError = null;
 
