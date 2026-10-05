@@ -175,16 +175,20 @@ function bootstrap() {
 }
 
 function collapseWordmark() {
+  const introWord = document.getElementById("introWord");
+  if (!introWord) return; // Mencegah JS crash kalau elemen tidak ditemukan
+
   const outers = document.querySelectorAll("#introWord .iw-letter:not(.iw-ai)");
   outers.forEach((el) => {
     const w = el.getBoundingClientRect().width;
     el.style.width = w + "px";
   });
-  // force layout so the browser commits the measured widths before we transition them to 0
-  void document.getElementById("introWord").offsetWidth;
+
+  void introWord.offsetWidth;
   requestAnimationFrame(() => {
     outers.forEach((el) => el.classList.add("collapsing"));
   });
+
   const ai = document.getElementById("introWordAi");
   const reduced =
     window.matchMedia &&
