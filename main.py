@@ -3,12 +3,7 @@ Brain — backend (FastAPI)
 =====================================================================
 - Menyimpan API key di server (file .env), TIDAK pernah dikirim ke browser.
 - Meneruskan chat dari brain.html ke provider AI yang dipilih.
-- Sekaligus menyajikan frontend (folder "frontend"), jadi cukup satu perintah:
-
-      pip install -r requirements.txt
-      python main.py
-
-  lalu buka http://localhost:3001
+- Memiliki sistem Auto-Fallback: Prioritas Gemini 1.5 Flash -> GPT-4o Mini -> Model Awal.
 """
 
 import os
@@ -34,7 +29,6 @@ load_dotenv(BASE_DIR / ".env")
 PORT = int(os.getenv("PORT", "3001"))
 REQUEST_TIMEOUT = 120.0
 
-# provider id (dipakai brain.html) -> nama variabel API key di .env
 PROVIDERS = {
     "openrouter": "OPENROUTER_API_KEY",
     "claude": "ANTHROPIC_API_KEY",
@@ -54,8 +48,6 @@ def get_key(provider: str) -> str:
 
 app = FastAPI(title="Brain Backend")
 
-# Jika frontend dihosting di domain lain, isi CORS_ORIGINS di .env,
-# contoh: CORS_ORIGINS=https://situsmu.com,https://www.situsmu.com
 _origins = [o.strip() for o in env("CORS_ORIGINS", "*").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
@@ -65,8 +57,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Pembatas laju per IP supaya key-mu tidak disalahgunakan saat situs publik.
 RATE_LIMIT = int(env("RATE_LIMIT_PER_MIN", "20"))
 _hits = defaultdict(deque)
 
@@ -109,7 +99,6 @@ class UpstreamError(Exception):
 
 
 def error_message(data, fallback: str) -> str:
-    """Ambil pesan error dari berbagai bentuk respons provider."""
     try:
         err = data.get("error") if isinstance(data, dict) else None
         if isinstance(err, dict):
@@ -122,7 +111,6 @@ def error_message(data, fallback: str) -> str:
 
 
 def clean_messages(messages: List[Msg]):
-    """Terima teks biasa atau daftar bagian (teks + gambar data-URL)."""
     out = []
     for m in messages:
         role = "assistant" if m.role == "assistant" else "user"
@@ -147,12 +135,6 @@ def clean_messages(messages: List[Msg]):
 def split_data_url(url: str):
     head, data = url.split(",", 1)
     return head[5:].split(";")[0], data
-
-
-def as_text(content) -> str:
-    if isinstance(content, str):
-        return content
-    return "\n".join(p.get("text", "") for p in content if p.get("type") == "text")
 
 
 def to_claude_content(content):
@@ -200,8 +182,6 @@ async def post_json(client: httpx.AsyncClient, url: str, headers: dict, body: di
 # --------------------------------------------------------------------------
 async def call_openrouter(key: str, messages: list, system: Optional[str]):
     base = env("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
-    # "openrouter/free" = router resmi OpenRouter yang otomatis memilih model
-    # gratis yang tersedia, jadi tidak rusak saat model gratis berganti.
     model = env("OPENROUTER_MODEL", "openrouter/free")
     headers = {
         "Content-Type": "application/json",
@@ -227,28 +207,19 @@ async def call_openrouter(key: str, messages: list, system: Optional[str]):
 
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
         r, data = await post_json(client, base + "/chat/completions", headers, build(True))
-        # sebagian model gratis menolak role "system": ulangi dengan system digabung ke pesan user
         if r.status_code == 400 and system:
             r, data = await post_json(client, base + "/chat/completions", headers, build(False))
 
     if r.status_code == 429:
-        raise UpstreamError("Batas pemakaian model gratis tercapai (sekitar 20 permintaan/menit). Tunggu sebentar lalu coba lagi.", 429)
+        raise UpstreamError("Batas pemakaian model gratis tercapai. Tunggu sebentar lalu coba lagi.", 429)
     if r.status_code in (401, 403):
-        raise UpstreamError("API key OpenRouter ditolak. Periksa OPENROUTER_API_KEY di file .env.", 401)
-    if r.status_code == 402:
-        raise UpstreamError("Saldo/kuota OpenRouter tidak cukup untuk model ini. Pakai model gratis (OPENROUTER_MODEL=openrouter/free).", 402)
+        raise UpstreamError("API key OpenRouter ditolak.", 401)
     if not r.is_success:
         msg = error_message(data, "OpenRouter error %d" % r.status_code)
-        if "image" in msg.lower():
-            msg = "Model gratis yang sedang tersedia belum bisa membaca gambar. Coba lagi sebentar lagi atau kirim tanpa gambar."
         raise UpstreamError(msg, 502)
 
     choices = (data or {}).get("choices") or []
-    if choices and isinstance(choices[0], dict) and choices[0].get("error"):
-        raise UpstreamError(error_message(choices[0], "Model gratis sedang sibuk, coba lagi."), 502)
-    text = ""
-    if choices:
-        text = ((choices[0].get("message") or {}).get("content")) or ""
+    text = ((choices[0].get("message") or {}).get("content")) or "" if choices else ""
     usage = (data or {}).get("usage") or {}
     tokens = int(usage.get("prompt_tokens") or 0) + int(usage.get("completion_tokens") or 0)
     return {"text": text.strip() or "(tidak ada respons)", "usage": tokens}
@@ -282,7 +253,7 @@ async def call_claude(key: str, messages: list, system: Optional[str]):
 
 
 # --------------------------------------------------------------------------
-# OpenAI & xAI (format chat/completions yang sama)
+# OpenAI & xAI
 # --------------------------------------------------------------------------
 async def call_chat_completions(url: str, key: str, model: str, label: str, messages: list, system: Optional[str]):
     msgs = ([{"role": "system", "content": system}] if system else []) + messages
@@ -291,7 +262,7 @@ async def call_chat_completions(url: str, key: str, model: str, label: str, mess
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
         r, data = await post_json(client, url, headers, body)
     if not r.is_success:
-        raise UpstreamError(error_message(data, "%s error %d" % (label, r.status_code)), 502)
+        raise UpstreamError(error_message(data, "%s error %d" % (label, r.status_code)), r.status_code)
     choices = (data or {}).get("choices") or []
     text = ((choices[0].get("message") or {}).get("content") or "") if choices else ""
     usage = (data or {}).get("usage") or {}
@@ -299,9 +270,10 @@ async def call_chat_completions(url: str, key: str, model: str, label: str, mess
     return {"text": text.strip() or "(tidak ada respons)", "usage": tokens}
 
 
-async def call_openai(key, messages, system):
+async def call_openai(key: str, messages: list, system: Optional[str], model_name: Optional[str] = None):
+    model = model_name or env("OPENAI_MODEL", "gpt-4o-mini")
     return await call_chat_completions(
-        "https://api.openai.com/v1/chat/completions", key, env("OPENAI_MODEL", "gpt-4o"), "OpenAI", messages, system)
+        "https://api.openai.com/v1/chat/completions", key, model, "OpenAI", messages, system)
 
 
 async def call_grok(key, messages, system):
@@ -312,8 +284,8 @@ async def call_grok(key, messages, system):
 # --------------------------------------------------------------------------
 # Google (Gemini)
 # --------------------------------------------------------------------------
-async def call_gemini(key: str, messages: list, system: Optional[str]):
-    model = env("GEMINI_MODEL", "gemini-2.5-flash")
+async def call_gemini(key: str, messages: list, system: Optional[str], model_name: Optional[str] = None):
+    model = model_name or env("GEMINI_MODEL", "gemini-1.5-flash")
     contents = [
         {"role": "model" if m["role"] == "assistant" else "user", "parts": to_gemini_parts(m["content"])}
         for m in messages
@@ -326,7 +298,7 @@ async def call_gemini(key: str, messages: list, system: Optional[str]):
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
         r, data = await post_json(client, url, headers, body)
     if not r.is_success:
-        raise UpstreamError(error_message(data, "Gemini error %d" % r.status_code), 502)
+        raise UpstreamError(error_message(data, "Gemini error %d" % r.status_code), r.status_code)
     cands = (data or {}).get("candidates") or []
     parts = ((cands[0].get("content") or {}).get("parts") or []) if cands else []
     text = "".join(p.get("text", "") for p in parts)
@@ -345,7 +317,7 @@ CALLERS = {
 
 
 # --------------------------------------------------------------------------
-# Routes
+# Routes & Auto-Fallback Logic
 # --------------------------------------------------------------------------
 @app.get("/api/health")
 async def health():
@@ -367,13 +339,36 @@ async def chat(req: ChatRequest, request: Request):
     if sum(len(json.dumps(x["content"])) for x in messages) > 14_000_000:
         return JSONResponse({"error": "Lampiran terlalu besar. Kurangi jumlah atau ukuran gambar."}, status_code=413)
 
+    system_prompt = (req.system or "").strip() or None
+
+    # 1. PRIORITAS UTAMA: Coba Gemini 1.5 Flash
+    gemini_key = get_key("gemini")
+    if gemini_key:
+        try:
+            res = await call_gemini(gemini_key, messages, system_prompt, model_name="gemini-1.5-flash")
+            return res
+        except UpstreamError as e:
+            print(f"[Fallback Log] Gemini 1.5 Flash gagal/limit ({e.message}). Menuju ke GPT-4o Mini...")
+
+    # 2. PRIORITAS KEDUA: Coba GPT-4o Mini (OpenAI)
+    openai_key = get_key("openai")
+    if openai_key:
+        try:
+            res = await call_openai(openai_key, messages, system_prompt, model_name="gpt-4o-mini")
+            return res
+        except UpstreamError as e:
+            print(f"[Fallback Log] GPT-4o Mini gagal/limit ({e.message}). Menuju ke model awal provider...")
+
+    # 3. FALLBACK TERAKHIR: Pakai model awal dari provider yang dipilih di frontend
     key = get_key(req.provider)
     if not key:
         return JSONResponse(
-            {"error": "%s belum diisi di file .env server." % PROVIDERS[req.provider]}, status_code=400)
+            {"error": "Semua model prioritas gagal/limit, dan %s belum diisi di file .env." % PROVIDERS[req.provider]}, 
+            status_code=400
+        )
 
     try:
-        result = await CALLERS[req.provider](key, messages, (req.system or "").strip() or None)
+        result = await CALLERS[req.provider](key, messages, system_prompt)
         return result
     except UpstreamError as e:
         return JSONResponse({"error": e.message}, status_code=e.status)
@@ -382,7 +377,7 @@ async def chat(req: ChatRequest, request: Request):
 
 
 # --------------------------------------------------------------------------
-# Frontend (satu server untuk semuanya)
+# Frontend
 # --------------------------------------------------------------------------
 if FRONTEND_DIR.is_dir():
 
