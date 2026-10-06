@@ -22,10 +22,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
 <link rel="stylesheet" href="brain.css">
 </head>
 <body>
 <div id="introScreen">
+  <div class="intro-galaxy"></div>
+  <div class="intro-band"></div>
   <canvas id="introBgCanvas" class="intro-bg-canvas"></canvas>
   <div class="intro-vignette"></div>
   <div class="intro-grain"></div>
@@ -37,8 +40,10 @@
       <div class="intro-orb-glow"></div>
       <canvas id="introOrbCanvas" class="intro-orb-canvas"></canvas>
     </div>
-    <div class="intro-word" id="introWord"><span class="iw-letter">B</span><span class="iw-letter">R</span><span class="iw-letter iw-ai" id="introWordAi">AI</span><span class="iw-letter">N</span></div>
-    <div class="intro-status">Initializing Intelligence...</div>
+    <div class="intro-stage">
+      <div class="intro-word" id="introWord"><span class="iw-letter">B</span><span class="iw-letter">R</span><span class="iw-letter iw-ai" id="introWordAi">AI</span><span class="iw-letter">N</span></div>
+      <div class="intro-ready" id="introReady" aria-hidden="true"><span class="intro-ready-text">Get Ready...</span></div>
+    </div>
     <div class="intro-progress"><div class="intro-progress-fill" id="introProgressFill"></div></div>
   </div>
 
@@ -61,7 +66,7 @@
       <div class="model-select-wrap">
         <button id="modelSelectBtn" class="model-select" aria-haspopup="listbox">
           <span class="model-select-engine-icon" id="modelSelectIcon"></span>
-          <span id="modelSelectLabel">Claude</span>
+          <span id="modelSelectLabel">Brain Asgra</span>
         </button>
         <div id="modelDropdown" class="model-dropdown" role="listbox"></div>
       </div>
@@ -116,18 +121,28 @@
 
       <div id="historyList" class="history-list"></div>
 
-      <div class="sidebar-footer">Brain &middot; copyright 2026 Azyyr©(Zayyan)"</div>
+      <div class="sidebar-footer">Brain &middot; API key tersimpan aman di server (backend proxy)</div>
     </aside>
 
     <main class="main">
+      <div class="chat-aura" id="chatAura" aria-hidden="true"><div class="aura-stars"></div></div>
       <div class="messages" id="messagesScroll">
         <div class="messages-inner" id="messagesInner"></div>
       </div>
 
       <div class="composer-wrap">
         <div class="composer">
-          <textarea id="composerInput" placeholder="Tulis pesan ke Brain..." rows="1"></textarea>
-          <button id="sendBtn" class="send-btn" aria-label="Kirim" disabled></button>
+          <div class="attach-strip" id="attachStrip"></div>
+          <div class="composer-row">
+            <button type="button" id="attachBtn" class="tool-btn" aria-label="Lampirkan file atau gambar" title="Lampirkan file atau gambar"></button>
+            <textarea id="composerInput" placeholder="Tulis pesan ke Brain..." rows="1"></textarea>
+            <button id="sendBtn" class="send-btn" aria-label="Kirim" disabled></button>
+          </div>
+          <div class="composer-tools">
+            <button type="button" id="thinkPill" class="think-pill" aria-pressed="false" title="Deep Thinking: Brain menalar langkah demi langkah"></button>
+            <button type="button" id="modelPill" class="model-pill" aria-haspopup="listbox" aria-expanded="false" title="Pilih model Brain"></button>
+          </div>
+          <input type="file" id="fileInput" multiple hidden accept="image/*,.pdf,.txt,.md,.csv,.tsv,.json,.xml,.yaml,.yml,.log,.sql,.html,.css,.js,.jsx,.ts,.tsx,.py,.java,.c,.cpp,.go,.rs,.php,.rb,.sh,.ini,.toml">
         </div>
         <div class="composer-hint">Brain bisa saja keliru. Periksa kembali informasi penting.</div>
       </div>
