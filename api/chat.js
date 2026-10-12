@@ -1,17 +1,17 @@
-// File: api/chat.js
+// File: api/chat.js  (versi streaming)
 
-// Daftar model gratis OpenRouter (urut: utama -> cadangan).
-// Daftar free sering berubah, jadi yang terakhir pakai router otomatis.
+// Biar function tidak mati terlalu cepat saat model lambat.
+// Kalau deploy error karena batas plan, turunkan angkanya.
+export const config = { maxDuration: 60 };
+
+// Urut: utama -> cadangan. OpenRouter yang mencoba berikutnya
+// secara otomatis di sisi server (tanpa round trip tambahan).
 const FREE_MODELS = [
   "nvidia/nemotron-3.5-lightning:free",
   "thinkingmachines/inkling-small:free",
   "google/gemma-4-31b-it:free",
   "openrouter/free",
 ];
-
-// Batas waktu per model, biar model yang macet tidak menahan semuanya.
-// Sesuaikan dengan batas durasi function di Vercel kamu.
-const TIMEOUT_MS = 12000;
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -26,6 +26,10 @@ export default async function handler(req, res) {
     });
   }
 
+  const controller = new AbortController();
+  // Kalau pengguna menutup tab / menekan stop, hentikan request ke OpenRouter.
+  res.on("close", () => controller.abort());
+
   try {
     const body = req.body || {};
     const { messages, system } = body;
@@ -35,54 +39,59 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "system", content: system });
     }
 
-    let lastError = "";
+    const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://brainai-pro.vercel.app",
+        "X-Title": "Brain Orbit",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        models: FREE_MODELS,              // fallback otomatis di OpenRouter
+        messages: fullMessages,
+        stream: true,                     // kirim token satu per satu
+        provider: { sort: "throughput" }, // pilih provider tercepat
+        reasoning: { effort: "low" },     // kurangi "mikir" sebelum menjawab
+      }),
+      signal: controller.signal,
+    });
 
-    for (const modelCandidate of FREE_MODELS) {
+    // Gagal sebelum stream mulai -> balas JSON error biasa.
+    if (!upstream.ok || !upstream.body) {
+      let msg = `HTTP ${upstream.status}`;
       try {
-        const response = await fetch(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Authorization": `Bearer ${apiKey}`,
-              "HTTP-Referer": "https://brainai-pro.vercel.app",
-              "X-Title": "Brain Orbit",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: modelCandidate,
-              messages: fullMessages,
-            }),
-            signal: AbortSignal.timeout(TIMEOUT_MS),
-          }
-        );
-
-        const data = await response.json();
-        const text = data.choices?.[0]?.message?.content;
-
-        // Lek sukses nemu respons
-        if (response.ok && typeof text === "string" && text.trim()) {
-          return res.status(200).json({
-            text,
-            // Kalau pakai openrouter/free, data.model berisi model asli yang dipilih
-            modelUsed: data.model || modelCandidate,
-          });
-        }
-
-        lastError =
-          data.error?.message || `HTTP ${response.status} (${modelCandidate})`;
-      } catch (err) {
-        lastError = `${modelCandidate}: ${err.message}`;
-      }
+        const data = await upstream.json();
+        msg = data.error?.message || msg;
+      } catch {}
+      return res.status(upstream.status || 500).json({
+        error: `OpenRouter Error: ${msg}`,
+      });
     }
 
-    return res.status(500).json({
-      error: `OpenRouter Error: ${lastError}`,
-    });
+    res.status(200);
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders?.();
 
+    // Teruskan stream SSE dari OpenRouter apa adanya ke browser.
+    for await (const chunk of upstream.body) {
+      res.write(chunk);
+    }
+    res.end();
   } catch (error) {
-    return res.status(500).json({
-      error: `Server Internal Error: ${error.message || error}`,
-    });
+    if (error?.name === "AbortError") return; // klien berhenti, normal
+    if (!res.headersSent) {
+      return res.status(500).json({
+        error: `Server Internal Error: ${error.message || error}`,
+      });
+    }
+    // Stream sudah mulai: kirim error sebagai event lalu tutup.
+    res.write(
+      `data: ${JSON.stringify({ error: { message: String(error.message || error) } })}\n\n`
+    );
+    res.end();
   }
 }
