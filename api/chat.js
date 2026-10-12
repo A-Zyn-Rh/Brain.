@@ -1,5 +1,18 @@
 // File: api/chat.js
 
+// Daftar model gratis OpenRouter (urut: utama -> cadangan).
+// Daftar free sering berubah, jadi yang terakhir pakai router otomatis.
+const FREE_MODELS = [
+  "nvidia/nemotron-3.5-lightning:free",
+  "thinkingmachines/inkling-small:free",
+  "google/gemma-4-31b-it:free",
+  "openrouter/free",
+];
+
+// Batas waktu per model, biar model yang macet tidak menahan semuanya.
+// Sesuaikan dengan batas durasi function di Vercel kamu.
+const TIMEOUT_MS = 12000;
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -22,16 +35,9 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "system", content: system });
     }
 
-    // Nemotron 70B minangka pilihan utama, ditututi model gratis stabil liyane
-    const freeModels = [
-      "nvidia/llama-3.1-nemotron-70b-instruct:free",
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "deepseek/deepseek-chat:free"
-    ];
-
     let lastError = "";
 
-    for (const modelCandidate of freeModels) {
+    for (const modelCandidate of FREE_MODELS) {
       try {
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
@@ -47,22 +53,26 @@ export default async function handler(req, res) {
               model: modelCandidate,
               messages: fullMessages,
             }),
+            signal: AbortSignal.timeout(TIMEOUT_MS),
           }
         );
 
         const data = await response.json();
+        const text = data.choices?.[0]?.message?.content;
 
         // Lek sukses nemu respons
-        if (response.ok && data.choices?.[0]?.message?.content) {
+        if (response.ok && typeof text === "string" && text.trim()) {
           return res.status(200).json({
-            text: data.choices[0].message.content,
-            modelUsed: modelCandidate,
+            text,
+            // Kalau pakai openrouter/free, data.model berisi model asli yang dipilih
+            modelUsed: data.model || modelCandidate,
           });
         }
 
-        lastError = data.error?.message || `HTTP ${response.status}`;
+        lastError =
+          data.error?.message || `HTTP ${response.status} (${modelCandidate})`;
       } catch (err) {
-        lastError = err.message;
+        lastError = `${modelCandidate}: ${err.message}`;
       }
     }
 
