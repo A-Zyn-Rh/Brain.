@@ -23,10 +23,10 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "system", content: system });
     }
 
-    // Daftar model Groq yang valid dan aktif
+    // Daftar model Groq terbaru yang aktif dan stabil
     const freeModelsFallback = [
       "llama-3.3-70b-versatile",
-      "gemma2-9b-it"
+      "mixtral-8x7b-32768"
     ];
 
     let lastError = null;
