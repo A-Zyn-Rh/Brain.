@@ -22,35 +22,51 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "system", content: system });
     }
 
-    // Menggunakan API OpenRouter dengan model gratis pilihan utama
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://brainai-pro.vercel.app", // Opsional (identitas web kamu)
-          "X-Title": "Brain Orbit",                         // Opsional (nama aplikasi)
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "deepseek/deepseek-r1:free", // Model reasoning super cerdas & gratis
-          messages: fullMessages,
-        }),
+    // Daftar model gratis terbaik dan aktif di OpenRouter
+    const freeModels = [
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "deepseek/deepseek-chat:free",
+      "google/gemini-2.0-flash-exp:free"
+    ];
+
+    let lastError = null;
+
+    for (const modelCandidate of freeModels) {
+      try {
+        const response = await fetch(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "HTTP-Referer": "https://brainai-pro.vercel.app",
+              "X-Title": "Brain Orbit",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: modelCandidate,
+              messages: fullMessages,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (response.ok && data.choices?.[0]?.message?.content) {
+          return res.status(200).json({
+            text: data.choices[0].message.content,
+            modelUsed: modelCandidate,
+          });
+        }
+
+        lastError = data.error?.message || `HTTP ${response.status}`;
+      } catch (err) {
+        lastError = err.message;
       }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      return res.status(500).json({
-        error: `OpenRouter Error: ${data.error?.message || response.statusText}`,
-      });
     }
 
-    return res.status(200).json({
-      text: data.choices[0].message.content,
-      modelUsed: "deepseek/deepseek-r1:free",
+    return res.status(500).json({
+      error: `OpenRouter Error: ${lastError}`,
     });
 
   } catch (error) {
