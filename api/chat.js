@@ -23,55 +23,36 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "system", content: system });
     }
 
-    // Daftar model Groq terbaru yang aktif dan stabil
-    const freeModelsFallback = [
-      "deepseek-r1-distill-llama-70b", // Model reasoning super cerdas di Groq
-      "llama-3.3-70b-versatile",       // Model flagship Llama 3.3
-      "llama3-8b-8192"                 // Model ringan andalan Groq
-    ];
-
-    let lastError = null;
-
-    // Loop mencoba model satu per satu sampai ada yang berhasil
-    for (const currentModel of freeModelsFallback) {
-      try {
-        const response = await fetch(
-          "https://api.groq.com/openai/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model: currentModel,
-              messages: fullMessages,
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        // Jika berhasil (200 OK)
-        if (response.ok && data.choices?.[0]?.message?.content) {
-          return res.status(200).json({
-            text: data.choices[0].message.content,
-            usage: data.usage?.total_tokens || 0,
-            modelUsed: currentModel,
-          });
-        }
-
-        lastError =
-          data.error?.message ||
-          `Status ${response.status} dari model ${currentModel}`;
-      } catch (err) {
-        lastError = err.message;
+    // Menggunakan model flagship utama Groq yang stabil
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: fullMessages,
+        }),
       }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(500).json({
+        error: `Groq Error: ${data.error?.message || response.statusText}`,
+      });
     }
 
-    return res.status(500).json({
-      error: `Semua model gagal merespon. Error terakhir: ${lastError}`,
+    return res.status(200).json({
+      text: data.choices[0].message.content,
+      usage: data.usage?.total_tokens || 0,
+      modelUsed: "llama-3.3-70b-versatile",
     });
+
   } catch (error) {
     return res.status(500).json({
       error: `Server Error: ${error.message || error}`,
