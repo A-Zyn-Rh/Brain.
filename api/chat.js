@@ -10,7 +10,6 @@ const FREE_MODELS = [
   "nvidia/nemotron-3.5-lightning:free",
   "thinkingmachines/inkling-small:free",
   "google/gemma-4-31b-it:free",
-  "openrouter/free",
 ];
 
 export default async function handler(req, res) {
