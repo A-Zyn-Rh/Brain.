@@ -25,8 +25,9 @@ export default async function handler(req, res) {
 
     // Daftar model Groq terbaru yang aktif dan stabil
     const freeModelsFallback = [
-      "llama-3.3-70b-versatile",
-      "mixtral-8x7b-32768"
+      "deepseek-r1-distill-llama-70b", // Model reasoning super cerdas di Groq
+      "llama-3.3-70b-versatile",       // Model flagship Llama 3.3
+      "llama3-8b-8192"                 // Model ringan andalan Groq
     ];
 
     let lastError = null;
