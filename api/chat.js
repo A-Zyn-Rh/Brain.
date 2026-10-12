@@ -9,7 +9,7 @@ export default async function handler(req, res) {
 
   if (!apiKey) {
     return res.status(500).json({
-      error: "OPENROUTER_API_KEY belum dipasang di Environment Variables Vercel!",
+      error: "OPENROUTER_API_KEY durung dipasang nang Environment Variables Vercel!",
     });
   }
 
@@ -22,16 +22,17 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "system", content: system });
     }
 
-    // Daftar model gratis terbaik dan aktif di OpenRouter
-    const freeModels = [
+    // Model gratis OpenRouter seng saiki PASTI aktif lan jarang error
+    const validFreeModels = [
       "meta-llama/llama-3.3-70b-instruct:free",
       "deepseek/deepseek-chat:free",
-      "google/gemini-2.0-flash-exp:free"
+      "qwen/qwen-2.5-coder-32b-instruct:free",
+      "mistralai/mistral-7b-instruct:free"
     ];
 
-    let lastError = null;
+    let lastError = "";
 
-    for (const modelCandidate of freeModels) {
+    for (const modelCandidate of validFreeModels) {
       try {
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
@@ -52,6 +53,7 @@ export default async function handler(req, res) {
 
         const data = await response.json();
 
+        // Lek sukses nemu jawaban
         if (response.ok && data.choices?.[0]?.message?.content) {
           return res.status(200).json({
             text: data.choices[0].message.content,
@@ -65,6 +67,7 @@ export default async function handler(req, res) {
       }
     }
 
+    // Lek kabeh model OpenRouter gagal
     return res.status(500).json({
       error: `OpenRouter Error: ${lastError}`,
     });
