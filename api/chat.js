@@ -23,9 +23,9 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "user", content: `[System Instruction]: ${system}` });
     }
 
-    // Menggunakan model Gemini 2.0 Flash yang aktif dan didukung penuh
+    // Menggunakan model Gemini 3.8 Flash sesuai instruksi error terbaru Google
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       text: textResult,
-      modelUsed: "gemini-2.0-flash",
+      modelUsed: "gemini-3.8-flash",
     });
   } catch (error) {
     return res.status(500).json({
