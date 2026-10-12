@@ -5,11 +5,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  const apiKey = (process.env.OPENROUTER_API_KEY || "").trim();
 
   if (!apiKey) {
     return res.status(500).json({
-      error: "GEMINI_API_KEY belum dipasang di Environment Variables Vercel!",
+      error: "OPENROUTER_API_KEY belum dipasang di Environment Variables Vercel!",
     });
   }
 
@@ -17,60 +17,40 @@ export default async function handler(req, res) {
     const body = req.body || {};
     const { messages, system } = body;
 
-    const contents = Array.isArray(messages)
-      ? messages.map((msg) => ({
-          role: msg.role === "assistant" ? "model" : "user",
-          parts: [{ text: msg.content || "" }],
-        }))
-      : [];
-
-    // Daftar model cadangan otomatis jika salah satu model sedang padat (high demand)
-    const modelsToTry = ["gemini-1.5-flash", "gemini-2.5-flash", "gemini-3.8-flash"];
-    let lastError = null;
-    let successData = null;
-    let usedModel = "";
-
-    for (const model of modelsToTry) {
-      try {
-        const payload = { contents };
-        if (system) {
-          payload.system_instruction = {
-            parts: [{ text: system }],
-          };
-        }
-
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          }
-        );
-
-        const data = await response.json();
-
-        if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-          successData = data.candidates[0].content.parts[0].text;
-          usedModel = model;
-          break; // Berhenti looping jika berhasil
-        }
-
-        lastError = data.error?.message || `HTTP ${response.status}`;
-      } catch (err) {
-        lastError = err.message;
-      }
+    let fullMessages = Array.isArray(messages) ? [...messages] : [];
+    if (system) {
+      fullMessages.unshift({ role: "system", content: system });
     }
 
-    if (!successData) {
-      return res.status(503).json({
-        error: `Semua model Gemini sedang sibuk. Silakan coba kirim ulang pesan dalam 1-2 detik. (${lastError})`,
+    // Menggunakan API OpenRouter dengan model gratis pilihan utama
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://brainai-pro.vercel.app", // Opsional (identitas web kamu)
+          "X-Title": "Brain Orbit",                         // Opsional (nama aplikasi)
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "deepseek/deepseek-r1:free", // Model reasoning super cerdas & gratis
+          messages: fullMessages,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(500).json({
+        error: `OpenRouter Error: ${data.error?.message || response.statusText}`,
       });
     }
 
     return res.status(200).json({
-      text: successData,
-      modelUsed: usedModel,
+      text: data.choices[0].message.content,
+      modelUsed: "deepseek/deepseek-r1:free",
     });
 
   } catch (error) {
