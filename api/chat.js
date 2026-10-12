@@ -5,7 +5,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Ambil API Key dari Vercel
   const apiKey = (process.env.GEMINI_API_KEY || "").trim();
 
   if (!apiKey) {
@@ -23,42 +22,49 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "user", content: `[System Instruction]: ${system}` });
     }
 
-    // Menggunakan model Gemini 3.8 Flash sesuai instruksi error terbaru Google
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: fullMessages.map((msg) => ({
-            role: msg.role === "assistant" ? "model" : "user",
-            parts: [{ text: msg.content || "" }],
-          })),
-        }),
+    // Daftar model Gemini yang akan dicoba berurutan jika ada yang 'high demand'
+    const models = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
+    let lastError = null;
+
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: fullMessages.map((msg) => ({
+                role: msg.role === "assistant" ? "model" : "user",
+                parts: [{ text: msg.content || "" }],
+              })),
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        // Jika sukses (200 OK)
+        if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          return res.status(200).json({
+            text: data.candidates[0].content.parts[0].text,
+            modelUsed: model,
+          });
+        }
+
+        lastError = data.error?.message || `HTTP ${response.status}`;
+      } catch (err) {
+        lastError = err.message;
       }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      const errMsg =
-        data.error?.message ||
-        `HTTP Error Status: ${response.status} ${response.statusText}`;
-      return res.status(response.status || 500).json({
-        error: `Google Gemini Error: ${errMsg}`,
-      });
     }
 
-    // Mengambil teks balasan dari struktur data Gemini
-    const textResult =
-      data.candidates?.[0]?.content?.parts?.[0]?.text || "Tidak ada respon.";
-
-    return res.status(200).json({
-      text: textResult,
-      modelUsed: "gemini-3.8-flash",
+    // Jika semua model dalam antrean gagal
+    return res.status(503).json({
+      error: `Semua model Gemini sedang sibuk. Coba lagi dalam beberapa detik. Detail: ${lastError}`,
     });
+
   } catch (error) {
     return res.status(500).json({
       error: `Server Internal Error: ${error.message || error}`,
