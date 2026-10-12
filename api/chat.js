@@ -22,17 +22,16 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "system", content: system });
     }
 
-    // Model gratis OpenRouter seng saiki PASTI aktif lan jarang error
-    const validFreeModels = [
+    // Nemotron 70B minangka pilihan utama, ditututi model gratis stabil liyane
+    const freeModels = [
+      "nvidia/llama-3.1-nemotron-70b-instruct:free",
       "meta-llama/llama-3.3-70b-instruct:free",
-      "deepseek/deepseek-chat:free",
-      "qwen/qwen-2.5-coder-32b-instruct:free",
-      "mistralai/mistral-7b-instruct:free"
+      "deepseek/deepseek-chat:free"
     ];
 
     let lastError = "";
 
-    for (const modelCandidate of validFreeModels) {
+    for (const modelCandidate of freeModels) {
       try {
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
@@ -53,7 +52,7 @@ export default async function handler(req, res) {
 
         const data = await response.json();
 
-        // Lek sukses nemu jawaban
+        // Lek sukses nemu respons
         if (response.ok && data.choices?.[0]?.message?.content) {
           return res.status(200).json({
             text: data.choices[0].message.content,
@@ -67,7 +66,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Lek kabeh model OpenRouter gagal
     return res.status(500).json({
       error: `OpenRouter Error: ${lastError}`,
     });
