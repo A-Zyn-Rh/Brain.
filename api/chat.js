@@ -6,68 +6,56 @@ export default async function handler(req, res) {
   }
 
   const apiKey = (process.env.GEMINI_API_KEY || "").trim();
-
   if (!apiKey) {
-    return res.status(500).json({
-      error: "GEMINI_API_KEY belum dipasang di Environment Variables Vercel!",
-    });
+    return res.status(500).json({ error: "GEMINI_API_KEY belum dipasang!" });
   }
 
   try {
-    const body = req.body || {};
-    const { messages, system } = body;
-
+    const { messages, system } = req.body || {};
     let fullMessages = Array.isArray(messages) ? [...messages] : [];
     if (system) {
       fullMessages.unshift({ role: "user", content: `[System Instruction]: ${system}` });
     }
 
-    // Daftar model Gemini yang akan dicoba berurutan jika ada yang 'high demand'
-    const models = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-1.5-flash"];
-    let lastError = null;
-
-    for (const model of models) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              contents: fullMessages.map((msg) => ({
-                role: msg.role === "assistant" ? "model" : "user",
-                parts: [{ text: msg.content || "" }],
-              })),
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        // Jika sukses (200 OK)
-        if (response.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-          return res.status(200).json({
-            text: data.candidates[0].content.parts[0].text,
-            modelUsed: model,
-          });
-        }
-
-        lastError = data.error?.message || `HTTP ${response.status}`;
-      } catch (err) {
-        lastError = err.message;
+    // Menggunakan endpoint streamGenerateContent dengan alt=sse
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse&key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: fullMessages.map((msg) => ({
+            role: msg.role === "assistant" ? "model" : "user",
+            parts: [{ text: msg.content || "" }],
+          })),
+        }),
       }
+    );
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      return res.status(response.status).json({
+        error: errData.error?.message || "Gagal menghubungi Gemini Stream API",
+      });
     }
 
-    // Jika semua model dalam antrean gagal
-    return res.status(503).json({
-      error: `Semua model Gemini sedang sibuk. Coba lagi dalam beberapa detik. Detail: ${lastError}`,
-    });
+    // Set header HTTP untuk Server-Sent Events (SSE)
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
 
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      res.write(chunk);
+    }
+
+    return res.end();
   } catch (error) {
-    return res.status(500).json({
-      error: `Server Internal Error: ${error.message || error}`,
-    });
+    return res.status(500).json({ error: `Server Error: ${error.message}` });
   }
 }
