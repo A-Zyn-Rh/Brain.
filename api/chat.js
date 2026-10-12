@@ -10,8 +10,7 @@ export default async function handler(req, res) {
 
   if (!apiKey) {
     return res.status(500).json({
-      error:
-        "GROQ_API_KEY belum dipasang di Environment Variables Vercel!",
+      error: "GROQ_API_KEY belum dipasang di Environment Variables Vercel!",
     });
   }
 
@@ -24,10 +23,10 @@ export default async function handler(req, res) {
       fullMessages.unshift({ role: "system", content: system });
     }
 
-    // Daftar model andalan Groq yang gratis dan super cepat
+    // Daftar model Groq yang valid dan aktif
     const freeModelsFallback = [
       "llama-3.3-70b-versatile",
-      "llama-3.1-8b-instant"
+      "gemma2-9b-it"
     ];
 
     let lastError = null;
@@ -47,7 +46,7 @@ export default async function handler(req, res) {
               model: currentModel,
               messages: fullMessages,
             }),
-          },
+          }
         );
 
         const data = await response.json();
