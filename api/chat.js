@@ -20,12 +20,12 @@ export default async function handler(req, res) {
 
     let fullMessages = Array.isArray(messages) ? [...messages] : [];
     if (system) {
-      fullMessages.unshift({ role: "system", content: system });
+      fullMessages.unshift({ role: "user", content: `[System Instruction]: ${system}` });
     }
 
-    // Panggilan langsung ke API Gemini resmi
+    // Menggunakan model Gemini 2.0 Flash yang aktif dan didukung penuh
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: {
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       text: textResult,
-      modelUsed: "gemini-1.5-flash",
+      modelUsed: "gemini-2.0-flash",
     });
   } catch (error) {
     return res.status(500).json({
