@@ -50,8 +50,7 @@ export default async function handler(req, res) {
         models: FREE_MODELS,              // fallback otomatis di OpenRouter
         messages: fullMessages,
         stream: true,                     // kirim token satu per satu
-        provider: { sort: "throughput" }, // pilih provider tercepat
-        reasoning: { effort: "low" },     // kurangi "mikir" sebelum menjawab
+        provider: { sort: "throughput" }, // pilih provider tercepat
       }),
       signal: controller.signal,
     });
